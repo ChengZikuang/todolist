@@ -49,32 +49,77 @@ export default {
   setup() {
     const taskStore = useTaskStore()
     const newTask = ref('')
+    const API_BASE_URL = 'http://localhost:3000/api';
 
+    // 获取任务
+    const fetchTasks = () => {
+      fetch(`${API_BASE_URL}/tasks?showCompleted=${taskStore.showCompleted}`)
+        .then(response => response.json())
+        .then(data => {
+          taskStore.tasks = data;
+        });
+    };
+
+    // 添加任务
     const addTask = () => {
       if (newTask.value.trim() !== '') {
-        taskStore.addTask(newTask.value)
-        newTask.value = ''
+        fetch(`${API_BASE_URL}/tasks`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ content: newTask.value })
+        })
+          .then(response => response.json())
+          .then(data => {
+            taskStore.addTask(data.content);
+          });
+        newTask.value = '';
       }
-    }
+    };
 
+    // 删除任务
     const deleteTask = (id) => {
-      taskStore.deleteTask(id)
-    }
+      fetch(`${API_BASE_URL}/tasks/${id}`, {
+        method: 'DELETE'
+      })
+        .then(() => {
+          taskStore.deleteTask(id);
+        });
+    };
 
+    // 更新任务状态
     const toggleTaskStatus = (id) => {
-      taskStore.toggleTaskStatus(id)
-    }
+      const task = taskStore.tasks.find(task => task.id === id);
+      if (task) {
+        fetch(`${API_BASE_URL}/tasks/${id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ completed: !task.completed })
+        })
+          .then(() => {
+            taskStore.toggleTaskStatus(id);
+          });
+      }
+    };
 
+    // 切换显示已完成任务的状态
     const toggleShowCompleted = (value) => {
-      taskStore.setShowCompleted(value)
-    }
+      taskStore.setShowCompleted(value);
+      fetchTasks(); // 切换状态后重新获取任务
+    };
+
+    // 初始化获取任务
+    fetchTasks();
 
     return {
       newTask,
       addTask,
       deleteTask,
       toggleTaskStatus,
-      toggleShowCompleted,
+      toggleShowCompleted, // 添加此行
       showCompleted: taskStore.showCompleted,
       filteredTasks: computed(() => {
         return taskStore.showCompleted 

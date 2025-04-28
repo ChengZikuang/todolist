@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 export const useTaskStore = defineStore('tasks', {
   state: () => ({
     tasks: [],
-    showCompleted: false
+    showCompleted: false // 默认值为 false
   }),
   actions: {
     addTask(content) {
