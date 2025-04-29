@@ -55,15 +55,19 @@ app.put('/api/tasks/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { completed } = req.body;
-
-    await pool.query(
+    
+    console.log('Received update request:', { id, completed });
+    
+    const [result] = await pool.query(
       'UPDATE tasks SET completed = ? WHERE id = ?',
       [completed, id]
     );
-
+    
+    console.log('Update result:', result);
+    
     res.sendStatus(204);
   } catch (err) {
-    console.error(err);
+    console.error('Error updating task:', err);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
