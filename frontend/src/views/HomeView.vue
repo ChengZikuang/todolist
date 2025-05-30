@@ -51,7 +51,7 @@ import axios from "axios";
 
 const taskStore = useTaskStore();
 const newTask = ref("");
-const API_BASE_URL = "http://localhost:3000/api";
+const API_BASE_URL = "http://47.122.77.131:3000/api";
 
 // 获取任务
 const fetchTasks = () => {
