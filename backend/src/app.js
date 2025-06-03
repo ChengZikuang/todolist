@@ -54,23 +54,55 @@ app.post('/api/tasks', async (req, res) => {
 app.put('/api/tasks/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { completed } = req.body;
-    
-    console.log('Received update request:', { id, completed });
-    
-    const [result] = await pool.query(
-      'UPDATE tasks SET completed = ? WHERE id = ?',
-      [completed, id]
-    );
-    
-    console.log('Update result:', result);
-    
-    res.sendStatus(204);
+    const { completed, content } = req.body;
+
+    if (isNaN(Number(id))) {
+      return res.status(400).json({ error: 'Invalid task ID' });
+    }
+
+    const updates = [];
+    const values = [];
+
+    // 判断 content 字段是否传入
+    if (Object.prototype.hasOwnProperty.call(req.body, 'content')) {
+      updates.push('content = ?');
+      values.push(content);
+    }
+
+    // 判断 completed 字段是否传入
+    if (Object.prototype.hasOwnProperty.call(req.body, 'completed')) {
+      updates.push('completed = ?');
+      values.push(completed ? 1 : 0);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'No changes provided' });
+    }
+
+    values.push(id);
+    const query = `UPDATE tasks SET ${updates.join(', ')} WHERE id = ?`;
+
+    const [updateResult] = await pool.query(query, values);
+    console.log('Update result:', updateResult);
+
+    const [task] = await pool.query('SELECT * FROM tasks WHERE id = ?', [id]);
+    if (!task.length) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+
+    res.json({
+      id: task[0].id,
+      content: task[0].content,
+      completed: Boolean(task[0].completed),
+      created_at: task[0].created_at
+    });
+
   } catch (err) {
-    console.error('Error updating task:', err);
+    console.error('Error in update route:', err);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
+
 
 // 删除任务
 app.delete('/api/tasks/:id', async (req, res) => {

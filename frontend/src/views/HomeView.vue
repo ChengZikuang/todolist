@@ -27,9 +27,28 @@
               :model-value="task.completed"
               @update:model-value="() => toggleTaskStatus(task.id)"
             />
-            <span :class="{ completed: task.completed }" class="task-content">{{
-              task.content
-            }}</span>
+            <el-input
+              v-if="task.isEditing"
+              v-model="task.editingContent"
+              @blur="saveTaskEdit(task)"
+              @keyup.enter="saveTaskEdit(task)"
+              @keyup.esc="cancelTaskEdit(task)"
+              size="small"
+              class="task-edit-input"
+            />
+            <span
+              v-else
+              :class="{ completed: task.completed }"
+              class="task-content"
+              @dblclick="startTaskEdit(task)"
+            >{{ task.content }}</span>
+            <el-button
+              type="primary"
+              size="small"
+              @click="startTaskEdit(task)"
+              class="edit-btn"
+              >编辑</el-button
+            >
             <el-button
               type="danger"
               size="small"
@@ -45,13 +64,13 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed } from "vue";
 import { useTaskStore } from "@/store";
 import axios from "axios";
 
 const taskStore = useTaskStore();
 const newTask = ref("");
-const API_BASE_URL = "http://47.122.77.131:3000/api";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // 获取任务
 const fetchTasks = () => {
@@ -130,6 +149,42 @@ const filteredTasks = computed(() => {
     ? taskStore.tasks
     : taskStore.tasks.filter((task) => !task.completed);
 });
+
+// 开始编辑任务
+const startTaskEdit = (task) => {
+  task.isEditing = true;
+  task.editingContent = task.content;
+};
+
+// 保存任务编辑
+const saveTaskEdit = (task) => {
+  if (task.editingContent.trim() !== "") {
+    
+    axios.put(`${API_BASE_URL}/tasks/${task.id}`, {
+      content: task.editingContent
+    })
+      .then(response => {
+        console.log('Edit response:', response.data);
+        task.content = task.editingContent;
+        task.isEditing = false;
+        fetchTasks();
+      })
+      .catch(error => {
+        console.error('Failed to update task:', error);
+        console.error('Error details:', {
+          message: error.message,
+          response: error.response,
+          request: error.request
+        });
+      });
+  }
+};
+
+// 取消任务编辑
+const cancelTaskEdit = (task) => {
+  task.isEditing = false;
+  task.editingContent = task.content;
+};
 </script>
 
 <style scoped>
@@ -164,7 +219,7 @@ const filteredTasks = computed(() => {
 }
 
 .task-content {
-  margin-left: 10px; /* 增加左边距 */
+  margin-left: 10px;
 }
 
 .completed {
@@ -172,7 +227,17 @@ const filteredTasks = computed(() => {
   color: #c0c4cc;
 }
 
-.delete-btn {
+.task-edit-input {
+  margin-left: 10px;
+  width: 300px;
+}
+
+.edit-btn {
   margin-left: auto;
+  margin-right: 10px;
+}
+
+.delete-btn {
+  margin-left: 0;
 }
 </style>
