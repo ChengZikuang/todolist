@@ -46,7 +46,7 @@ app.get('/api/tasks/:id', async (req, res) => {
     if (rows.length === 0) {
       return res.status(404).json({ error: 'Task not found' });
     }
-
+    console.log("return id:"+id)
     res.json(rows[0]);
   } catch (err) {
     console.error(err);
@@ -72,18 +72,56 @@ app.post('/api/tasks', async (req, res) => {
   }
 });
 
-// 更新任务状态
 app.put('/api/tasks/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { content ,completed } = req.body;
-    console.log("get data id:"+id+",completed:"+completed+",content:"+content);
-    
+    const { content, completed } = req.body;
+
+    console.log(`get data id:${id}, completed:${completed}, content:${content}`);
+
+    // 构建动态更新字段
+    const updates = [];
+    const values = [];
+
+    if (content !== undefined) {
+      updates.push('content = ?');
+      values.push(content);
+    }
+
+    if (completed !== undefined) {
+      updates.push('completed = ?');
+      values.push(completed ? 1 : 0);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'No valid fields to update' });
+    }
+
+    values.push(id); // 最后一个是 WHERE 条件里的 id
+
+    const sql = `UPDATE tasks SET ${updates.join(', ')} WHERE id = ?`;
+
+    const [updateResult] = await pool.query(sql, values);
+
+    console.log('update check');
+    if (updateResult.affectedRows === 0) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+
+    // 返回更新后的任务
+    const [task] = await pool.query('SELECT * FROM tasks WHERE id = ?', [id]);
+    res.json({
+      id: task[0].id,
+      content: task[0].content,
+      completed: Boolean(task[0].completed),
+      created_at: task[0].created_at
+    });
   } catch (err) {
     console.error('Error in update route:', err);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
+
 
 
 // 删除任务
