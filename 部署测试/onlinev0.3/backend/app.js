@@ -32,6 +32,28 @@ app.get('/api/tasks', async (req, res) => {
   }
 });
 
+// 获取单个任务
+app.get('/api/tasks/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (isNaN(Number(id))) {
+      return res.status(400).json({ error: 'Invalid task ID' });
+    }
+
+    const [rows] = await pool.query('SELECT * FROM tasks WHERE id = ?', [id]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+
+    res.json(rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
 // 添加新任务
 app.post('/api/tasks', async (req, res) => {
   try {
@@ -54,49 +76,9 @@ app.post('/api/tasks', async (req, res) => {
 app.put('/api/tasks/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { completed, content } = req.body;
-
-    if (isNaN(Number(id))) {
-      return res.status(400).json({ error: 'Invalid task ID' });
-    }
-
-    const updates = [];
-    const values = [];
-
-    // 判断 content 字段是否传入
-    if (Object.prototype.hasOwnProperty.call(req.body, 'content')) {
-      updates.push('content = ?');
-      values.push(content);
-    }
-
-    // 判断 completed 字段是否传入
-    if (Object.prototype.hasOwnProperty.call(req.body, 'completed')) {
-      updates.push('completed = ?');
-      values.push(completed ? 1 : 0);
-    }
-
-    if (updates.length === 0) {
-      return res.status(400).json({ error: 'No changes provided' });
-    }
-
-    values.push(id);
-    const query = `UPDATE tasks SET ${updates.join(', ')} WHERE id = ?`;
-
-    const [updateResult] = await pool.query(query, values);
-    console.log('Update result:', updateResult);
-
-    const [task] = await pool.query('SELECT * FROM tasks WHERE id = ?', [id]);
-    if (!task.length) {
-      return res.status(404).json({ error: 'Task not found' });
-    }
-
-    res.json({
-      id: task[0].id,
-      content: task[0].content,
-      completed: Boolean(task[0].completed),
-      created_at: task[0].created_at
-    });
-
+    const { content ,completed } = req.body;
+    console.log("get data id:"+id+",completed:"+completed+",content:"+content);
+    
   } catch (err) {
     console.error('Error in update route:', err);
     res.status(500).json({ error: 'Internal Server Error' });
